@@ -1,65 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-
-const allowedRoles = new Set(["operator", "admin"]);
-
-function publicError(error) {
-  if (error.message.includes("environment")) {
-    return { status: 500, message: "Admin service is not configured" };
-  }
-
-  if (error.message.includes("authorization")) {
-    return { status: 401, message: "Unauthorized" };
-  }
-
-  return { status: 500, message: "Admin request failed" };
-}
-
-function getSupabaseClients(req) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !anonKey || !serviceKey) {
-    throw new Error("Supabase admin environment is not configured");
-  }
-
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  if (!token) {
-    throw new Error("Missing authorization token");
-  }
-
-  return {
-    token,
-    userClient: createClient(url, anonKey),
-    adminClient: createClient(url, serviceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }),
-  };
-}
-
-async function requireAdmin(req) {
-  const { token, userClient, adminClient } = getSupabaseClients(req);
-  const { data: userData, error: userError } = await userClient.auth.getUser(token);
-
-  if (userError || !userData.user) {
-    return { error: "Unauthorized", status: 401 };
-  }
-
-  const { data: profile, error: profileError } = await adminClient
-    .from("profiles")
-    .select("role,is_authorized")
-    .eq("id", userData.user.id)
-    .single();
-
-  if (profileError || profile?.role !== "admin" || !profile?.is_authorized) {
-    return { error: "Admin access required", status: 403 };
-  }
-
-  return { adminClient };
-}
+import { isValidRole, publicError, requireAdmin } from "../../../lib/adminApi";
 
 async function listUsers(adminClient) {
   const { data: authData, error: authError } = await adminClient.auth.admin.listUsers({
@@ -116,7 +55,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Password must be at least 8 characters" });
       }
 
-      if (!allowedRoles.has(role)) {
+      if (!isValidRole(role)) {
         return res.status(400).json({ error: "Invalid role" });
       }
 
