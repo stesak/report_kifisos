@@ -38,6 +38,14 @@ where email = 'you@example.com';
 
 Οι RLS policies επιτρέπουν ανάγνωση/καταχώρηση συμβάντων μόνο σε authenticated χρήστες με `is_authorized = true`.
 
+Για το μενού `Χρήστες` χρειάζεται επιπλέον server-side env var:
+
+```env
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Το service role key μπαίνει μόνο σε `.env.local` ή στα server environment variables του deployment provider.
+
 ## Email
 
 Το `/api/send-email` χρησιμοποιεί Nodemailer για ειδοποίηση νέου συμβάντος όταν υπάρχουν SMTP μεταβλητές. Για verification/reset μπορείς να χρησιμοποιήσεις τα Supabase Auth email templates ή SMTP provider στο Supabase dashboard.

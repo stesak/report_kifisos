@@ -20,7 +20,10 @@ git push -u origin main
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://nymmxxasxenyktylzosn.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_Ft9Al1CPyPT9ogmXMleybg_WpTGG32_
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY` is required only for admin user management API routes. Keep it server-side only and never expose it in client code.
 
 5. Deploy.
 

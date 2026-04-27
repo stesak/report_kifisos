@@ -12,6 +12,8 @@ import {
   RadioTower,
   Save,
   Trash2,
+  UserCog,
+  UserPlus,
   X,
 } from "lucide-react";
 import Layout from "../components/Layout";
@@ -84,6 +86,16 @@ export default function Dashboard() {
   const [profile, setProfile] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState(null);
+  const [newUser, setNewUser] = useState({
+    email: "",
+    password: "",
+    role: "operator",
+    is_authorized: true,
+  });
+  const [passwordDrafts, setPasswordDrafts] = useState({});
 
   useEffect(() => {
     async function loadProfileAndIncidents() {
@@ -237,6 +249,127 @@ export default function Dashboard() {
 
   const isAdmin = profile?.role === "admin" || !isSupabaseConfigured;
 
+  async function getAccessToken() {
+    if (!isSupabaseConfigured) return null;
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token;
+  }
+
+  async function loadUsers() {
+    if (!isSupabaseConfigured) {
+      setUsers([
+        {
+          id: "demo-admin",
+          email: "demo@kifisos.local",
+          role: "admin",
+          is_authorized: true,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      return;
+    }
+
+    setUsersLoading(true);
+    setUsersError(null);
+    const token = await getAccessToken();
+    const response = await fetch("/api/admin/users", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await response.json();
+
+    if (!response.ok) {
+      setUsersError(body.error || "Αποτυχία φόρτωσης χρηστών");
+      setUsersLoading(false);
+      return;
+    }
+
+    setUsers(body.users || []);
+    setUsersLoading(false);
+  }
+
+  useEffect(() => {
+    if (activeTab === "users" && isAdmin) {
+      loadUsers();
+    }
+  }, [activeTab, isAdmin]);
+
+  async function createUser(event) {
+    event.preventDefault();
+
+    if (!isSupabaseConfigured) {
+      setUsers((current) => [
+        {
+          id: crypto.randomUUID(),
+          email: newUser.email,
+          role: newUser.role,
+          is_authorized: newUser.is_authorized,
+          created_at: new Date().toISOString(),
+        },
+        ...current,
+      ]);
+      setNewUser({ email: "", password: "", role: "operator", is_authorized: true });
+      return;
+    }
+
+    setUsersError(null);
+    const token = await getAccessToken();
+    const response = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newUser),
+    });
+    const body = await response.json();
+
+    if (!response.ok) {
+      setUsersError(body.error || "Αποτυχία δημιουργίας χρήστη");
+      return;
+    }
+
+    setUsers(body.users || []);
+    setNewUser({ email: "", password: "", role: "operator", is_authorized: true });
+  }
+
+  async function updateUserAccess(targetUser, patch) {
+    if (!isSupabaseConfigured) {
+      setUsers((current) =>
+        current.map((item) => (item.id === targetUser.id ? { ...item, ...patch } : item))
+      );
+      return;
+    }
+
+    setUsersError(null);
+    const token = await getAccessToken();
+    const response = await fetch(`/api/admin/users/${targetUser.id}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(patch),
+    });
+    const body = await response.json();
+
+    if (!response.ok) {
+      setUsersError(body.error || "Αποτυχία ενημέρωσης χρήστη");
+      return;
+    }
+
+    setUsers((current) =>
+      current.map((item) => (item.id === targetUser.id ? { ...item, ...patch } : item))
+    );
+  }
+
+  async function changePassword(targetUser) {
+    const password = passwordDrafts[targetUser.id];
+    if (!password) return;
+
+    await updateUserAccess(targetUser, { password });
+    setPasswordDrafts((current) => ({ ...current, [targetUser.id]: "" }));
+  }
+
   return (
     <Layout>
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-8">
@@ -266,10 +399,13 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        <nav className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <nav className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-4">
           <TabButton icon={FilePlus2} label="Καταχώρηση" active={activeTab === "create"} onClick={() => setActiveTab("create")} />
           <TabButton icon={ListChecks} label="Εγγραφές" active={activeTab === "records"} onClick={() => setActiveTab("records")} />
           <TabButton icon={MapPinned} label="Χάρτης" active={activeTab === "map"} onClick={() => setActiveTab("map")} />
+          {isAdmin ? (
+            <TabButton icon={UserCog} label="Χρήστες" active={activeTab === "users"} onClick={() => setActiveTab("users")} />
+          ) : null}
         </nav>
 
         {activeTab === "create" ? (
@@ -297,8 +433,190 @@ export default function Dashboard() {
         {activeTab === "map" ? (
           <MapPanel incidents={filteredItems} filters={filters} dispatch={dispatch} />
         ) : null}
+
+        {activeTab === "users" && isAdmin ? (
+          <UsersPanel
+            users={users}
+            loading={usersLoading}
+            error={usersError}
+            newUser={newUser}
+            setNewUser={setNewUser}
+            createUser={createUser}
+            updateUserAccess={updateUserAccess}
+            passwordDrafts={passwordDrafts}
+            setPasswordDrafts={setPasswordDrafts}
+            changePassword={changePassword}
+          />
+        ) : null}
       </div>
     </Layout>
+  );
+}
+
+function UsersPanel({
+  users,
+  loading,
+  error,
+  newUser,
+  setNewUser,
+  createUser,
+  updateUserAccess,
+  passwordDrafts,
+  setPasswordDrafts,
+  changePassword,
+}) {
+  return (
+    <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+      <form onSubmit={createUser} className="border border-slate-300 bg-white p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center bg-govblue text-white">
+            <UserPlus size={20} />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-ink">Νέος χρήστης</h2>
+            <p className="text-sm text-slate-600">Δημιουργία λογαριασμού από admin.</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-bold text-ink" htmlFor="new-user-email">
+              Email
+            </label>
+            <input
+              id="new-user-email"
+              type="email"
+              value={newUser.email}
+              onChange={(event) => setNewUser({ ...newUser, email: event.target.value })}
+              className="min-h-11 w-full border border-slate-400 px-3 py-2 outline-none focus:border-govblue focus:ring-2 focus:ring-govcyan"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-bold text-ink" htmlFor="new-user-password">
+              Κωδικός
+            </label>
+            <input
+              id="new-user-password"
+              type="password"
+              value={newUser.password}
+              onChange={(event) => setNewUser({ ...newUser, password: event.target.value })}
+              className="min-h-11 w-full border border-slate-400 px-3 py-2 outline-none focus:border-govblue focus:ring-2 focus:ring-govcyan"
+              minLength={8}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-bold text-ink" htmlFor="new-user-role">
+              Δικαιώματα
+            </label>
+            <select
+              id="new-user-role"
+              value={newUser.role}
+              onChange={(event) => setNewUser({ ...newUser, role: event.target.value })}
+              className="min-h-11 w-full border border-slate-400 px-3 py-2 outline-none focus:border-govblue focus:ring-2 focus:ring-govcyan"
+            >
+              <option value="operator">Καταχώρηση</option>
+              <option value="admin">Πλήρες admin</option>
+            </select>
+          </div>
+          <label className="flex items-center gap-2 text-sm font-bold text-ink">
+            <input
+              type="checkbox"
+              checked={newUser.is_authorized}
+              onChange={(event) => setNewUser({ ...newUser, is_authorized: event.target.checked })}
+              className="h-4 w-4"
+            />
+            Ενεργός χρήστης
+          </label>
+          <button
+            type="submit"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 bg-govblue px-4 font-bold text-white hover:bg-[#00285a]"
+          >
+            Δημιουργία χρήστη
+          </button>
+        </div>
+      </form>
+
+      <section className="border border-slate-300 bg-white">
+        <div className="border-b border-slate-300 px-4 py-4">
+          <h2 className="text-lg font-bold text-ink">Διαχείριση χρηστών</h2>
+          <p className="text-sm text-slate-600">
+            Ορίστε δικαιώματα καταχώρησης ή πλήρους admin και αλλάξτε κωδικό.
+          </p>
+        </div>
+
+        {error ? (
+          <div className="border-b border-slate-300 bg-red-50 px-4 py-3 text-sm font-bold text-signal">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="divide-y divide-slate-100">
+          {loading ? (
+            <p className="p-4 text-sm text-slate-600">Φόρτωση χρηστών...</p>
+          ) : users.length ? (
+            users.map((user) => (
+              <article key={user.id} className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_180px_260px]">
+                <div className="min-w-0">
+                  <h3 className="truncate font-bold text-ink">{user.email}</h3>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {user.email_confirmed_at ? "Email confirmed" : "Email unconfirmed"} ·{" "}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString("el-GR") : "-"}
+                  </p>
+                  <label className="mt-3 flex items-center gap-2 text-sm font-bold text-ink">
+                    <input
+                      type="checkbox"
+                      checked={user.is_authorized}
+                      onChange={(event) =>
+                        updateUserAccess(user, { is_authorized: event.target.checked })
+                      }
+                      className="h-4 w-4"
+                    />
+                    Ενεργός
+                  </label>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-bold text-ink">Δικαιώματα</label>
+                  <select
+                    value={user.role}
+                    onChange={(event) => updateUserAccess(user, { role: event.target.value })}
+                    className="min-h-10 w-full border border-slate-400 bg-white px-3 py-2 text-sm outline-none focus:border-govblue focus:ring-2 focus:ring-govcyan"
+                  >
+                    <option value="operator">Καταχώρηση</option>
+                    <option value="admin">Πλήρες admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-bold text-ink">Νέος κωδικός</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={passwordDrafts[user.id] || ""}
+                      onChange={(event) =>
+                        setPasswordDrafts({ ...passwordDrafts, [user.id]: event.target.value })
+                      }
+                      className="min-h-10 min-w-0 flex-1 border border-slate-400 px-3 py-2 text-sm outline-none focus:border-govblue focus:ring-2 focus:ring-govcyan"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => changePassword(user)}
+                      className="inline-flex h-10 items-center justify-center bg-govblue px-3 text-sm font-bold text-white"
+                    >
+                      Αλλαγή
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))
+          ) : (
+            <p className="p-4 text-sm text-slate-600">Δεν βρέθηκαν χρήστες.</p>
+          )}
+        </div>
+      </section>
+    </section>
   );
 }
 
