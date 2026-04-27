@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { FilePlus2, LockKeyhole, MapPinned, ShieldCheck } from "lucide-react";
 import Layout from "../components/Layout";
@@ -21,6 +21,12 @@ export default function PublicReport() {
   const dispatch = useDispatch();
   const { items, loading, error } = useSelector((state) => state.incidents);
   const { user } = useSelector((state) => state.auth);
+  const [notice, setNotice] = useState(null);
+
+  function showNotice(type, message) {
+    setNotice({ type, message });
+    window.setTimeout(() => setNotice(null), 5000);
+  }
 
   useEffect(() => {
     async function loadIncidents() {
@@ -59,10 +65,12 @@ export default function PublicReport() {
 
       if (insertError) {
         dispatch(setIncidentsError(insertError.message));
+        showNotice("error", `Η καταχώρηση απέτυχε: ${insertError.message}`);
         return;
       }
 
       dispatch(addIncident(data));
+      showNotice("success", "Το περιστατικό καταχωρήθηκε επιτυχώς.");
       await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,6 +89,7 @@ export default function PublicReport() {
         created_at: new Date().toISOString(),
       })
     );
+    showNotice("success", "Το περιστατικό καταχωρήθηκε επιτυχώς.");
   }
 
   return (
@@ -121,6 +130,8 @@ export default function PublicReport() {
             {error}
           </div>
         ) : null}
+
+        {notice ? <Notice type={notice.type} message={notice.message} /> : null}
 
         {!user ? (
           <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -188,5 +199,20 @@ export default function PublicReport() {
         )}
       </div>
     </Layout>
+  );
+}
+
+function Notice({ type, message }) {
+  const isSuccess = type === "success";
+
+  return (
+    <div
+      role="status"
+      className={`mb-5 border-l-4 bg-white px-4 py-3 text-sm font-bold ${
+        isSuccess ? "border-teal text-teal" : "border-signal text-signal"
+      }`}
+    >
+      {message}
+    </div>
   );
 }

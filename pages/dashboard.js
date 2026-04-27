@@ -96,6 +96,12 @@ export default function Dashboard() {
     is_authorized: true,
   });
   const [passwordDrafts, setPasswordDrafts] = useState({});
+  const [notice, setNotice] = useState(null);
+
+  function showNotice(type, message) {
+    setNotice({ type, message });
+    window.setTimeout(() => setNotice(null), 5000);
+  }
 
   useEffect(() => {
     async function loadProfileAndIncidents() {
@@ -168,10 +174,12 @@ export default function Dashboard() {
 
       if (insertError) {
         dispatch(setIncidentsError(insertError.message));
+        showNotice("error", `Η καταχώρηση απέτυχε: ${insertError.message}`);
         return;
       }
 
       dispatch(addIncident(data));
+      showNotice("success", "Το περιστατικό καταχωρήθηκε επιτυχώς.");
       await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,6 +198,7 @@ export default function Dashboard() {
         created_at: new Date().toISOString(),
       })
     );
+    showNotice("success", "Το περιστατικό καταχωρήθηκε επιτυχώς.");
   }
 
   function startEditing(incident) {
@@ -219,6 +228,7 @@ export default function Dashboard() {
 
       if (updateError) {
         dispatch(setIncidentsError(updateError.message));
+        showNotice("error", `Η επεξεργασία απέτυχε: ${updateError.message}`);
         return;
       }
 
@@ -229,6 +239,7 @@ export default function Dashboard() {
 
     setEditingId(null);
     setDraft(null);
+    showNotice("success", "Η εγγραφή ενημερώθηκε επιτυχώς.");
   }
 
   async function deleteIncident(incident) {
@@ -240,11 +251,13 @@ export default function Dashboard() {
 
       if (deleteError) {
         dispatch(setIncidentsError(deleteError.message));
+        showNotice("error", `Η διαγραφή απέτυχε: ${deleteError.message}`);
         return;
       }
     }
 
     dispatch(removeIncident(incident.id));
+    showNotice("success", "Η εγγραφή διαγράφηκε επιτυχώς.");
   }
 
   const isAdmin = profile?.role === "admin" || !isSupabaseConfigured;
@@ -308,6 +321,7 @@ export default function Dashboard() {
         ...current,
       ]);
       setNewUser({ email: "", password: "", role: "operator", is_authorized: true });
+      showNotice("success", "Ο χρήστης δημιουργήθηκε επιτυχώς.");
       return;
     }
 
@@ -325,18 +339,21 @@ export default function Dashboard() {
 
     if (!response.ok) {
       setUsersError(body.error || "Αποτυχία δημιουργίας χρήστη");
+      showNotice("error", body.error || "Η δημιουργία χρήστη απέτυχε.");
       return;
     }
 
     setUsers(body.users || []);
     setNewUser({ email: "", password: "", role: "operator", is_authorized: true });
+    showNotice("success", "Ο χρήστης δημιουργήθηκε επιτυχώς.");
   }
 
-  async function updateUserAccess(targetUser, patch) {
+  async function updateUserAccess(targetUser, patch, successMessage = "Ο χρήστης ενημερώθηκε επιτυχώς.") {
     if (!isSupabaseConfigured) {
       setUsers((current) =>
         current.map((item) => (item.id === targetUser.id ? { ...item, ...patch } : item))
       );
+      showNotice("success", successMessage);
       return;
     }
 
@@ -354,19 +371,21 @@ export default function Dashboard() {
 
     if (!response.ok) {
       setUsersError(body.error || "Αποτυχία ενημέρωσης χρήστη");
+      showNotice("error", body.error || "Η ενημέρωση χρήστη απέτυχε.");
       return;
     }
 
     setUsers((current) =>
       current.map((item) => (item.id === targetUser.id ? { ...item, ...patch } : item))
     );
+    showNotice("success", successMessage);
   }
 
   async function changePassword(targetUser) {
     const password = passwordDrafts[targetUser.id];
     if (!password) return;
 
-    await updateUserAccess(targetUser, { password });
+    await updateUserAccess(targetUser, { password }, "Ο κωδικός χρήστη άλλαξε επιτυχώς.");
     setPasswordDrafts((current) => ({ ...current, [targetUser.id]: "" }));
   }
 
@@ -398,6 +417,8 @@ export default function Dashboard() {
             {error}
           </div>
         ) : null}
+
+        {notice ? <Notice type={notice.type} message={notice.message} /> : null}
 
         <nav className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-4">
           <TabButton icon={FilePlus2} label="Καταχώρηση" active={activeTab === "create"} onClick={() => setActiveTab("create")} />
@@ -634,6 +655,21 @@ function TabButton({ icon: Icon, label, active, onClick }) {
       <Icon size={17} />
       {label}
     </button>
+  );
+}
+
+function Notice({ type, message }) {
+  const isSuccess = type === "success";
+
+  return (
+    <div
+      role="status"
+      className={`mb-5 border-l-4 bg-white px-4 py-3 text-sm font-bold ${
+        isSuccess ? "border-teal text-teal" : "border-signal text-signal"
+      }`}
+    >
+      {message}
+    </div>
   );
 }
 
