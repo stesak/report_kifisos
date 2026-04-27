@@ -1,5 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 
+const allowedRoles = new Set(["operator", "admin"]);
+
+function publicError(error) {
+  if (error.message.includes("environment")) {
+    return { status: 500, message: "Admin service is not configured" };
+  }
+
+  if (error.message.includes("authorization")) {
+    return { status: 401, message: "Unauthorized" };
+  }
+
+  return { status: 500, message: "Admin request failed" };
+}
+
 function getSupabaseClients(req) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -98,6 +112,18 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Email and password are required" });
       }
 
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      if (!allowedRoles.has(role)) {
+        return res.status(400).json({ error: "Invalid role" });
+      }
+
+      if (typeof is_authorized !== "boolean") {
+        return res.status(400).json({ error: "Invalid authorization value" });
+      }
+
       const { data, error } = await adminClient.auth.admin.createUser({
         email,
         password,
@@ -106,12 +132,14 @@ export default async function handler(req, res) {
 
       if (error) throw error;
 
-      await adminClient.from("profiles").upsert({
+      const { error: profileError } = await adminClient.from("profiles").upsert({
         id: data.user.id,
         email,
         role,
         is_authorized,
       });
+
+      if (profileError) throw profileError;
 
       const users = await listUsers(adminClient);
       return res.status(201).json({ users });
@@ -120,6 +148,8 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "Method not allowed" });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Admin users API error:", error);
+    const response = publicError(error);
+    return res.status(response.status).json({ error: response.message });
   }
 }

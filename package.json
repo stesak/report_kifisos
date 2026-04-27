@@ -11,6 +11,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "overrides": {
+    "postcss": "$postcss"
+  },
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
     "@supabase/supabase-js": "^2.104.1",

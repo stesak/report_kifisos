@@ -24,6 +24,7 @@ export default [
         window: "readonly",
         document: "readonly",
         module: "readonly",
+        console: "readonly",
       },
     },
     settings: {
