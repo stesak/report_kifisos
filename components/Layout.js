@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Activity, Building2, LogOut, ShieldCheck } from "lucide-react";
+import { Activity, Building2, FilePlus2, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
 import { clearUser, setUser } from "../store/authSlice";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
 
@@ -22,12 +22,7 @@ export default function Layout({ children }) {
 
     supabase.auth.getUser().then(({ data }) => {
       dispatch(setUser(data.user));
-      if (
-        !data.user &&
-        router.pathname !== "/login" &&
-        router.pathname !== "/register" &&
-        router.pathname !== "/reset-password"
-      ) {
+      if (!data.user && router.pathname === "/dashboard") {
         router.replace("/login");
       }
     });
@@ -75,21 +70,37 @@ export default function Layout({ children }) {
             </span>
           </Link>
 
-          <nav className="flex min-w-0 items-center justify-between gap-2 lg:justify-end">
+          <nav className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:justify-end">
             <span className="flex min-w-0 items-center gap-2 border border-white/30 px-3 py-2 text-sm text-white/90">
               <ShieldCheck size={16} />
               <span className="truncate">{loading ? "Έλεγχος..." : user?.email || "Χωρίς σύνδεση"}</span>
             </span>
             {user ? (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-white/30 bg-white text-govblue hover:bg-govgray"
-                aria-label="Αποσύνδεση"
-                title="Αποσύνδεση"
-              >
-                <LogOut size={18} />
-              </button>
+              <>
+                <Link
+                  href="/"
+                  className="inline-flex h-10 shrink-0 items-center gap-2 border border-white/30 px-3 text-sm font-bold text-white hover:bg-white/10"
+                >
+                  <FilePlus2 size={16} />
+                  Καταχώρηση
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex h-10 shrink-0 items-center gap-2 border border-white/30 px-3 text-sm font-bold text-white hover:bg-white/10"
+                >
+                  <LayoutDashboard size={16} />
+                  Dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-white/30 bg-white text-govblue hover:bg-govgray"
+                  aria-label="Αποσύνδεση"
+                  title="Αποσύνδεση"
+                >
+                  <LogOut size={18} />
+                </button>
+              </>
             ) : (
               <Link
                 href="/login"
