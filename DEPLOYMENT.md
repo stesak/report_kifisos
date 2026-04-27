@@ -26,7 +26,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_Ft9Al1CPyPT9ogmXMleybg_WpTGG32_
 
 ## Supabase Auth URLs
 
-After Vercel gives you a production URL, add it in Supabase:
+Preferred production URL:
+
+```text
+https://report-kifisos.vercel.app
+```
+
+In Vercel, set the project name/domain to `report-kifisos` so the default Vercel domain becomes `report-kifisos.vercel.app`.
+
+After Vercel gives you the production URL, add it in Supabase:
 
 - Authentication -> URL Configuration -> Site URL
 - Authentication -> URL Configuration -> Redirect URLs
@@ -34,6 +42,6 @@ After Vercel gives you a production URL, add it in Supabase:
 Use:
 
 ```text
-https://your-vercel-domain.vercel.app
-https://your-vercel-domain.vercel.app/login
+https://report-kifisos.vercel.app
+https://report-kifisos.vercel.app/login
 ```
