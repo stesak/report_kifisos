@@ -54,6 +54,7 @@ const incidentSlice = createSlice({
     error: null,
     filters: {
       type: "all",
+      period: "all",
     },
   },
   reducers: {
@@ -64,6 +65,15 @@ const incidentSlice = createSlice({
     },
     addIncident(state, action) {
       state.items.unshift(action.payload);
+    },
+    updateIncident(state, action) {
+      const index = state.items.findIndex((item) => item.id === action.payload.id);
+      if (index >= 0) {
+        state.items[index] = action.payload;
+      }
+    },
+    removeIncident(state, action) {
+      state.items = state.items.filter((item) => item.id !== action.payload);
     },
     setIncidentsLoading(state, action) {
       state.loading = action.payload;
@@ -81,6 +91,8 @@ const incidentSlice = createSlice({
 export const {
   setIncidents,
   addIncident,
+  updateIncident,
+  removeIncident,
   setIncidentsLoading,
   setIncidentsError,
   setFilter,
