@@ -2,11 +2,10 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  AlertTriangle,
   BarChart3,
-  CheckCircle2,
   Clock,
   Filter,
+  MapPinned,
   RadioTower,
 } from "lucide-react";
 import Layout from "../components/Layout";
@@ -77,14 +76,12 @@ export default function Home() {
     () =>
       items.filter((incident) => {
         const typeMatch = filters.type === "all" || incident.type === filters.type;
-        const statusMatch = filters.status === "all" || incident.status === filters.status;
-        return typeMatch && statusMatch;
+        return typeMatch;
       }),
     [items, filters]
   );
 
   const stats = useMemo(() => {
-    const active = items.filter((incident) => incident.status === "active").length;
     const averageDuration = items.length
       ? Math.round(items.reduce((sum, item) => sum + Number(item.duration_minutes || 0), 0) / items.length)
       : 0;
@@ -95,7 +92,7 @@ export default function Home() {
       }))
       .sort((a, b) => b.count - a.count)[0];
 
-    return { active, averageDuration, topType };
+    return { total: items.length, averageDuration, topType };
   }, [items]);
 
   async function handleCreateIncident(values) {
@@ -147,14 +144,14 @@ export default function Home() {
               Επιχειρησιακή εικόνα Κηφισού
             </p>
             <h1 className="max-w-3xl text-2xl font-bold tracking-normal text-ink sm:text-3xl">
-              Καταγραφή και παρακολούθηση περιστατικών κυκλοφορίας
+              Ιστορικό περιστατικών κυκλοφορίας
             </h1>
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-700">
-              Εισαγωγή συμβάντων από εξουσιοδοτημένους χρήστες, προβολή σημείων στον χάρτη και ανάλυση συχνότητας με heatmap.
+              Συγκεντρωτική εικόνα καταχωρήσεων με χάρτη, heatmap και στατιστικά για ανάλυση επαναλαμβανόμενων σημείων συμφόρησης.
             </p>
           </div>
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:mt-0">
-            <Stat icon={AlertTriangle} label="Ενεργά" value={stats.active} />
+            <Stat icon={MapPinned} label="Σύνολο" value={stats.total} />
             <Stat icon={Clock} label="Μέση διάρκεια" value={`${stats.averageDuration}'`} />
             <Stat icon={BarChart3} label="Συχνότερο" value={stats.topType?.count ? stats.topType.label : "-"} compact />
           </div>
@@ -191,16 +188,6 @@ export default function Home() {
                       {type.label}
                     </option>
                   ))}
-                </select>
-                <select
-                  value={filters.status}
-                  onChange={(event) => dispatch(setFilter({ name: "status", value: event.target.value }))}
-                  className="min-h-10 w-full border border-slate-400 bg-white px-3 py-2 outline-none focus:border-govblue focus:ring-2 focus:ring-govcyan sm:w-auto"
-                >
-                  <option value="all">Όλες οι καταστάσεις</option>
-                  <option value="active">Σε εξέλιξη</option>
-                  <option value="monitoring">Υπό παρακολούθηση</option>
-                  <option value="resolved">Έληξε</option>
                 </select>
               </div>
             </div>
@@ -251,13 +238,8 @@ function IncidentRow({ incident }) {
           <h3 className="font-bold text-ink">{incident.title}</h3>
           <p className="text-sm text-slate-600">{type?.label || incident.type}</p>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700">
-          <CheckCircle2 size={13} />
-          {incident.status === "active"
-            ? "Σε εξέλιξη"
-            : incident.status === "monitoring"
-              ? "Παρακολούθηση"
-              : "Έληξε"}
+        <span className="inline-flex shrink-0 items-center border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700">
+          {incident.severity === "high" ? "Υψηλή" : incident.severity === "medium" ? "Μέτρια" : "Χαμηλή"}
         </span>
       </div>
       {incident.description ? <p className="mb-2 text-sm text-slate-600">{incident.description}</p> : null}

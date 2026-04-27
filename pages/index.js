@@ -93,10 +93,10 @@ export default function PublicReport() {
               Δημόσια καταχώρηση περιστατικού
             </p>
             <h1 className="max-w-3xl text-2xl font-bold tracking-normal text-ink sm:text-3xl">
-              Αναφορά συμβάντος στον Κηφισό
+              Καταχώρηση περιστατικού στον Κηφισό
             </h1>
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-700">
-              Η καταχώρηση γίνεται μόνο από εξουσιοδοτημένους χρήστες. Συνδεθείτε για να εμφανιστεί ο χάρτης και η φόρμα αναφοράς.
+              Η καταχώρηση δημιουργεί ιστορική εγγραφή για ανάλυση σημείων συμφόρησης. Συνδεθείτε για να εμφανιστεί ο χάρτης και η φόρμα.
             </p>
           </div>
           <div className="mt-5 border border-slate-300 bg-govgray p-4 lg:mt-0">

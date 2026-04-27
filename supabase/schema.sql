@@ -28,7 +28,6 @@ create table if not exists public.incidents (
   longitude double precision not null check (longitude between 23.55 and 23.9),
   duration_minutes integer not null check (duration_minutes between 1 and 1440),
   severity text not null default 'medium' check (severity in ('low', 'medium', 'high')),
-  status text not null default 'active' check (status in ('active', 'monitoring', 'resolved')),
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -36,7 +35,6 @@ create table if not exists public.incidents (
 
 create index if not exists incidents_created_at_idx on public.incidents (created_at desc);
 create index if not exists incidents_type_idx on public.incidents (type);
-create index if not exists incidents_status_idx on public.incidents (status);
 create index if not exists incidents_location_idx on public.incidents (latitude, longitude);
 
 create or replace function public.handle_new_user()

@@ -17,7 +17,6 @@ const schema = Yup.object({
     .max(1440, "Μέγιστο 24 ώρες")
     .required("Απαιτείται διάρκεια"),
   severity: Yup.string().required("Επιλέξτε ένταση"),
-  status: Yup.string().required("Επιλέξτε κατάσταση"),
 });
 
 export default function IncidentForm({ incidents, onSubmit }) {
@@ -31,7 +30,6 @@ export default function IncidentForm({ incidents, onSubmit }) {
         longitude: "",
         duration_minutes: 30,
         severity: "medium",
-        status: "active",
       }}
       validationSchema={schema}
       onSubmit={async (values, helpers) => {
@@ -140,22 +138,6 @@ export default function IncidentForm({ incidents, onSubmit }) {
                     <option value="high">Υψηλή</option>
                   </Field>
                 </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink" htmlFor="status">
-                  Κατάσταση
-                </label>
-                <Field
-                  as="select"
-                  id="status"
-                  name="status"
-                  className="min-h-11 w-full border border-slate-400 px-3 py-2 outline-none focus:border-govblue focus:ring-2 focus:ring-govcyan"
-                >
-                  <option value="active">Σε εξέλιξη</option>
-                  <option value="monitoring">Υπό παρακολούθηση</option>
-                  <option value="resolved">Έληξε</option>
-                </Field>
               </div>
 
               <div>

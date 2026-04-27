@@ -20,7 +20,6 @@ const demoIncidents = [
     longitude: 23.6789,
     duration_minutes: 42,
     severity: "high",
-    status: "active",
     created_at: "2026-04-27T11:45:00.000Z",
   },
   {
@@ -32,7 +31,6 @@ const demoIncidents = [
     longitude: 23.7366,
     duration_minutes: 25,
     severity: "medium",
-    status: "monitoring",
     created_at: "2026-04-27T11:03:00.000Z",
   },
   {
@@ -44,7 +42,6 @@ const demoIncidents = [
     longitude: 23.7072,
     duration_minutes: 18,
     severity: "low",
-    status: "resolved",
     created_at: "2026-04-27T09:45:00.000Z",
   },
 ];
@@ -57,7 +54,6 @@ const incidentSlice = createSlice({
     error: null,
     filters: {
       type: "all",
-      status: "all",
     },
   },
   reducers: {
